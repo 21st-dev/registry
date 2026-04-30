@@ -1,0 +1,54 @@
+{
+  "name": "@21st-dev/registry",
+  "version": "0.0.1",
+  "description": "Open-source CLI for managing private React component registries — publish, install, search, and share with your team. Works with any AI agent that supports SKILL.md.",
+  "license": "MIT",
+  "homepage": "https://github.com/21st-dev/registry",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/21st-dev/registry.git"
+  },
+  "bugs": {
+    "url": "https://github.com/21st-dev/registry/issues"
+  },
+  "keywords": [
+    "21st",
+    "21st-sdk",
+    "shadcn",
+    "registry",
+    "components",
+    "react",
+    "tailwind",
+    "ai",
+    "claude",
+    "cursor",
+    "skills.sh"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "bin": {
+    "21st-registry": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "src",
+    "!src/**/*.test.ts",
+    "skills/**/*",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsup": "^8.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}

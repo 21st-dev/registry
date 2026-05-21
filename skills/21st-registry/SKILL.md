@@ -9,7 +9,7 @@ Use this skill in **two directions**: publishing a component for the team, and i
 
 ## Pre-flight (always)
 
-1. Check auth: `cat ~/.an/credentials` exists, or `API_KEY_21ST` env is set. If neither — tell the user to run `npx @21st-sdk/cli login` once. Don't try to log them in yourself.
+1. Check auth: `API_KEY_21ST` env is set, or the registry CLI has saved credentials. If neither — tell the user to run `npx @21st-dev/registry login` once. Don't try to log them in yourself.
 2. The CLI is `@21st-dev/registry`. Don't reinvent — use it.
 
 ---
@@ -21,11 +21,11 @@ Use this skill in **two directions**: publishing a component for the team, and i
 | User says… | Visibility |
 |---|---|
 | "share with team", "залей нам", "publish internally", default for any unqualified ask | `team` (no flag needed) |
-| "share publicly via link / on my profile, but don't put it on the marketplace" | `--unlisted` |
+| "share publicly via link / on my profile, but don't list it in the library" | `--unlisted` |
 | "publish publicly", "make it public on 21st" | `--public` |
 | "save it for me", "draft" | `--private` |
 
-**Never use `--public` without explicit user instruction.** Public components go through admin moderation and appear on the marketplace. `--unlisted` is the safe option when the user wants a shareable URL but doesn't want marketplace exposure.
+**Never use `--public` without explicit user instruction.** Public components go through admin moderation and appear in the 21st library. `--unlisted` is the safe option when the user wants a shareable URL but doesn't want a library listing.
 
 ### Standard publish
 
@@ -33,6 +33,7 @@ The CLI's positional file path triggers auto-detection — name from the default
 
 ```bash
 npx @21st-dev/registry ./path/to/Component.tsx \
+  --to default \
   --description "1-2 sentences about what it does and when to use it"
 ```
 
@@ -46,7 +47,7 @@ npx @21st-dev/registry ./path/to/Component.tsx \
 | `--slug my-button` | Override the URL slug. Default: kebab-case from name. |
 | `--demo ./Component.demo.tsx` | Demo file. Auto-detected by these patterns: `{Component}.demo.tsx`, `demos/{slug}.tsx`, `demos/default.tsx`. If none exist, the CLI synthesises a trivial `<Component />` demo automatically — fine for v1, but a real demo gives a much better preview. |
 | `--preview ./preview.png` | **Optional.** The team library uses a live iframe preview; a static image is only needed if you want a snappy thumbnail. |
-| `--to <registry-slug>` | Target a specific team registry (e.g. `--to marketing-blocks`). Default: team's first / default registry. Only meaningful for team-visibility components. |
+| `--to <registry-slug>` | Target a specific registry in the authenticated team (e.g. `--to default`). If omitted, the server uses the team's first/default registry. |
 | `--public` / `--unlisted` / `--private` | Override default `team` visibility. |
 
 ### What the user gets back
@@ -83,6 +84,20 @@ The CLI:
 3. Runs `pnpm/npm/yarn/bun add` for any npm dependencies
 4. If it depends on other 21st components, prints them — install with `add` separately
 
+For shadcn directly, public/unlisted components can use the plain registry URL:
+
+```bash
+npx shadcn@latest add "https://21st.dev/r/acme/animated-button"
+```
+
+For private or team-only components, pass the registry API key in the URL:
+
+```bash
+npx shadcn@latest add "https://21st.dev/r/acme/animated-button?api_key=$API_KEY_21ST"
+```
+
+Do not commit or share shadcn URLs that include `api_key`.
+
 Flags:
 - `--force` — overwrite existing file
 - `--no-install` — skip npm install step (just write files)
@@ -98,7 +113,7 @@ When the user wants a component but doesn't know the exact name:
 npx @21st-dev/registry search "<query>"
 ```
 
-Default scope is `team` (your team's library). Use `--scope mine` for just your own, `--scope public` for the marketplace.
+Default scope is `team` (your team's library). Use `--scope mine` for just your own, `--scope public` for the public library.
 
 **Always search before publishing if there's a chance a similar component already exists.** Don't add duplicates to the team library.
 

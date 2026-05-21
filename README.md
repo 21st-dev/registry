@@ -124,8 +124,8 @@ npx @21st-dev/registry \
 
 ### Multi-registry targeting
 
-`--to <slug>` targets a specific team registry by its slug. Without it, the
-CLI publishes to your team's first (default) registry.
+`--to <registry-slug>` targets a specific registry inside the team attached to
+your API key. Without it, the server uses your team's first/default registry.
 
 ## AI Agent Skill
 
@@ -146,12 +146,11 @@ npx skills add 21st-dev/registry
 
 ## Auth
 
-Credentials live at `~/.an/credentials` (shared with `@21st-sdk/cli` if you
-have that installed too). Run `npx @21st-dev/registry login` once — it
+Credentials live at `~/.an/credentials`. Run `npx @21st-dev/registry login` once — it
 prompts for your API key from
-[https://21st.dev/settings/api-keys](https://21st.dev/settings/api-keys).
+[https://21st.dev/team/api-keys](https://21st.dev/team/api-keys).
 
-You can also pass `API_KEY_21ST=21st_sk_...` in the environment.
+You can also pass `API_KEY_21ST=...` in the environment.
 
 ## Environment variables
 

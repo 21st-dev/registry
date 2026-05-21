@@ -62,7 +62,7 @@ interface PublishResponse {
   username: string
   slug: string
   url: string
-  visibility: "team" | "public" | "private"
+  visibility: "team" | "unlisted" | "public" | "private"
   install_ref: string
   demos: Array<{ id: number; slug: string }>
 }
@@ -71,7 +71,7 @@ export interface PublishUploadResult {
   url: string
   componentId: number
   isNew: boolean
-  visibility: "team" | "public" | "private"
+  visibility: "team" | "unlisted" | "public" | "private"
   installRef: string
   demos: PublishResponse["demos"]
 }

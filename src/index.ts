@@ -34,7 +34,7 @@ function showHelp(): void {
   console.log("  --name TEXT          Display name (auto-detected from default export)")
   console.log("  --description TEXT   1-2 sentence summary (required, 10+ chars)")
   console.log("  --registry NAME      Component type: ui | hooks | blocks | icons (default: ui)")
-  console.log("  --to SLUG            Target a specific team registry (default: team's first one)")
+  console.log("  --to SLUG            Target a registry in the authenticated team")
   console.log("  --tags T1,T2         1-5 tags (default: detected from imports)")
   console.log("  --slug SLUG          URL slug (default: derived from name)")
   console.log("  --component PATH     Component .tsx (positional path also works)")
@@ -51,7 +51,7 @@ function showHelp(): void {
 if (command === "login") {
   if (hasFlag("--help") || hasFlag("-h")) {
     console.log("Usage: npx @21st-dev/registry login [--api-key KEY]")
-    console.log("Get your API key at https://21st.dev/settings/api-keys")
+    console.log("Get your API key at https://21st.dev/team/api-keys")
   } else {
     await login({ apiKey: getFlagValue(args, "--api-key") })
   }

@@ -6,6 +6,7 @@ import {
   extname,
   isAbsolute,
   join,
+  relative,
   resolve,
 } from "node:path"
 import { tmpdir } from "node:os"
@@ -255,7 +256,7 @@ function autoFindDemo(componentPath: string, slug: string): string[] {
   const tmpDir = join(tmpdir(), `21st-registry-${Date.now()}`)
   mkdirSync(tmpDir, { recursive: true })
   const demoPath = join(tmpDir, "default.tsx")
-  const componentName = humanise(noExt).replace(/\s+/g, "")
+  const componentName = toComponentIdentifier(noExt)
   writeFileSync(
     demoPath,
     `import ${componentName} from "${relativeToImportRef(componentPath, demoPath)}"
@@ -273,8 +274,7 @@ export default function Demo() {
  * to `to` (the user's component file).
  */
 function relativeToImportRef(to: string, from: string): string {
-  const path = require("node:path") as typeof import("node:path")
-  let rel = path.relative(path.dirname(from), to).replace(/\\/g, "/")
+  let rel = relative(dirname(from), to).replace(/\\/g, "/")
   rel = rel.replace(/\.(tsx|ts|jsx|js)$/i, "")
   if (!rel.startsWith(".")) rel = "./" + rel
   return rel
@@ -348,4 +348,14 @@ function humanise(s: string): string {
     .split(" ")
     .map((w) => (w[0] ? w[0].toUpperCase() + w.slice(1) : w))
     .join(" ")
+}
+
+function toComponentIdentifier(seed: string): string {
+  const name = humanise(seed)
+    .replace(/\s+/g, "")
+    .replace(/[^A-Za-z0-9_$]/g, "")
+
+  if (!name) return "Component"
+  if (/^[A-Za-z_$]/.test(name)) return name
+  return `Component${name}`
 }

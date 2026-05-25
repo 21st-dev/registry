@@ -55,7 +55,7 @@ When loaded, the agent knows how to:
 - **Publish a component** — `npx @21st-dev/registry ./Button.tsx --description "..."`
 - **Install** from a team registry — `npx @21st-dev/registry add @team/slug`
 - **Search** the team library before duplicating — `npx @21st-dev/registry search "form"`
-- **Pick visibility** — `team` (default), `unlisted`, `public`, `private`
+- **Pick visibility** — `unlisted` (default), `public`, `private`
 - **Target a registry** — `--to <registry-slug>` inside the authenticated team
 - **Invite teammates** — `npx @21st-dev/registry invite`
 - Common pitfalls (default exports, demo imports, slug collisions)

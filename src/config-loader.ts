@@ -3,7 +3,7 @@ import { dirname, isAbsolute, resolve } from "node:path"
 import { slugify, validateSlug } from "./utils.js"
 
 export type Registry = "ui" | "hooks" | "blocks" | "icons"
-export type Visibility = "team" | "unlisted" | "public" | "private"
+export type Visibility = "unlisted" | "public" | "private"
 
 export interface DemoEntry {
   name: string
@@ -21,7 +21,7 @@ export interface PublishConfig {
   registry: Registry
   license?: string
   visibility?: Visibility
-  /** Optional team-Registry slug. Server picks team default if omitted. */
+  /** Optional team-Registry slug. Non-public CLI publishes use team default if omitted. */
   registry_slug?: string
   website_url?: string
   tags?: string[]
@@ -30,7 +30,7 @@ export interface PublishConfig {
 }
 
 const VALID_REGISTRIES: Registry[] = ["ui", "hooks", "blocks", "icons"]
-const VALID_VISIBILITIES: Visibility[] = ["team", "unlisted", "public", "private"]
+const VALID_VISIBILITIES: Visibility[] = ["unlisted", "public", "private"]
 
 export interface LoadedConfig {
   rootDir: string
@@ -196,8 +196,8 @@ function validateAndResolve(raw: unknown, rootDir: string): LoadedConfig {
   }
 
   // Visibility: explicit field is preferred. Legacy `is_public: true` is
-  // mapped to `public`, otherwise default to `team`.
-  let visibility: Visibility = "team"
+  // mapped to `public`, otherwise default to `unlisted`.
+  let visibility: Visibility = "unlisted"
   const visibilityRaw = optString(obj, "visibility")
   if (visibilityRaw) {
     if (!VALID_VISIBILITIES.includes(visibilityRaw as Visibility)) {

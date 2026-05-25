@@ -19,8 +19,8 @@ npx @21st-dev/registry add @your-team/button
 A team library is a **shadcn-compatible registry** of your team's React
 components, hosted on [21st.dev](https://21st.dev). You can:
 
-- **Publish** — push any `.tsx` file (with auto-detected demo) into a private
-  registry visible only to your team.
+- **Publish** — push any `.tsx` file (with auto-detected demo) into a team
+  registry. Component visibility controls who can install it.
 - **Install** — `npx @21st-dev/registry add @team/component` writes the file
   into your project and runs your package manager (pnpm/npm/yarn/bun).
 - **Search** — semantic search across the team library by name, description,
@@ -72,7 +72,7 @@ my-button/
   "description": "Smooth hover & press animations using framer-motion.",
   "registry": "ui",
   "tags": ["button", "animation"],
-  "visibility": "team",
+  "visibility": "unlisted",
   "component": "./component.tsx",
   "demos": [
     {
@@ -117,10 +117,9 @@ npx @21st-dev/registry \
 
 ### Visibility tiers
 
-- `--team` (default) — visible only to team members
-- `--unlisted` — public profile + direct URL only, not in marketplace search
+- `--unlisted` (default) — direct URL only, not in marketplace search
 - `--public` — submitted to the public 21st.dev marketplace (admin review)
-- `--private` — only the author
+- `--private` — only members of the registry team
 
 ### Multi-registry targeting
 

@@ -35,12 +35,12 @@ export async function publish(args: string[]): Promise<void> {
   p.log.info(`Registry:   ${loaded.config.registry}`)
   p.log.info(`Demos:      ${loaded.resolvedDemos.length}`)
   p.log.info(
-    `Visibility: ${loaded.config.visibility ?? "team"}${
+    `Visibility: ${loaded.config.visibility ?? "unlisted"}${
       loaded.config.visibility === "public"
         ? " (will go through review)"
         : loaded.config.visibility === "private"
-          ? " (only you)"
-          : " (your team)"
+          ? " (registry team only)"
+          : " (shareable link)"
     }`,
   )
 
@@ -214,17 +214,21 @@ function pickVisibility(args: string[]): Visibility | undefined {
   if (hasFlag(args, "--public")) return "public"
   if (hasFlag(args, "--unlisted")) return "unlisted"
   if (hasFlag(args, "--private")) return "private"
-  if (hasFlag(args, "--team")) return "team"
+  if (hasFlag(args, "--team")) {
+    throw new Error("--team is no longer supported. Use --unlisted instead.")
+  }
   const explicit = getFlagValue(args, "--visibility")
   if (
-    explicit === "team" ||
     explicit === "unlisted" ||
     explicit === "public" ||
     explicit === "private"
   ) {
     return explicit
   }
-  return undefined // db.ts defaults to "team"
+  if (explicit) {
+    throw new Error("--visibility must be one of: unlisted, public, private")
+  }
+  return undefined // config-loader defaults to "unlisted"
 }
 
 /**

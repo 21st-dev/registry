@@ -40,7 +40,7 @@ function showHelp(): void {
   console.log("  --component PATH     Component .tsx (positional path also works)")
   console.log("  --demo PATH          Demo .tsx (auto-detected, synthesised if absent)")
   console.log("  --preview PATH       Preview image (optional)")
-  console.log("  --visibility V       team (default) | unlisted | public | private")
+  console.log("  --visibility V       unlisted (default) | public | private")
   console.log("  --public / --unlisted / --private  Shortcut for --visibility")
   console.log("\nEnvironment:")
   console.log("  API_KEY_21ST         API key (skips login prompt)")

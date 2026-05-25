@@ -16,14 +16,14 @@ Use this skill in **two directions**: publishing a component for the team, and i
 
 ## Publishing a component
 
-### Decide visibility — default to `team`
+### Decide visibility — default to unlisted in a registry
 
 | User says… | Visibility |
 |---|---|
-| "share with team", "залей нам", "publish internally", default for any unqualified ask | `team` (no flag needed) |
+| "share with team", "залей нам", "publish internally", default for any unqualified ask | unlisted in the selected/default registry (no visibility flag needed) |
 | "share publicly via link / on my profile, but don't list it in the library" | `--unlisted` |
 | "publish publicly", "make it public on 21st" | `--public` |
-| "save it for me", "draft" | `--private` |
+| "restrict to the registry team", "private team draft" | `--private` |
 
 **Never use `--public` without explicit user instruction.** Public components go through admin moderation and appear in the 21st library. `--unlisted` is the safe option when the user wants a shareable URL but doesn't want a library listing.
 
@@ -48,7 +48,7 @@ npx @21st-dev/registry ./path/to/Component.tsx \
 | `--demo ./Component.demo.tsx` | Demo file. Auto-detected by these patterns: `{Component}.demo.tsx`, `demos/{slug}.tsx`, `demos/default.tsx`. If none exist, the CLI synthesises a trivial `<Component />` demo automatically — fine for v1, but a real demo gives a much better preview. |
 | `--preview ./preview.png` | **Optional.** The team library uses a live iframe preview; a static image is only needed if you want a snappy thumbnail. |
 | `--to <registry-slug>` | Target a specific registry in the authenticated team (e.g. `--to default`). If omitted, the server uses the team's first/default registry. |
-| `--public` / `--unlisted` / `--private` | Override default `team` visibility. |
+| `--public` / `--unlisted` / `--private` | Override component visibility. |
 
 ### What the user gets back
 
@@ -90,7 +90,7 @@ For shadcn directly, public/unlisted components can use the plain registry URL:
 npx shadcn@latest add "https://21st.dev/r/acme/animated-button"
 ```
 
-For private or team-only components, pass the registry API key in the URL:
+For private components, pass the registry API key in the URL:
 
 ```bash
 npx shadcn@latest add "https://21st.dev/r/acme/animated-button?api_key=$API_KEY_21ST"

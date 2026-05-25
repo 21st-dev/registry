@@ -62,7 +62,7 @@ interface PublishResponse {
   username: string
   slug: string
   url: string
-  visibility: "team" | "unlisted" | "public" | "private"
+  visibility: "unlisted" | "public" | "private"
   install_ref: string
   demos: Array<{ id: number; slug: string }>
 }
@@ -71,7 +71,7 @@ export interface PublishUploadResult {
   url: string
   componentId: number
   isNew: boolean
-  visibility: "team" | "unlisted" | "public" | "private"
+  visibility: "unlisted" | "public" | "private"
   installRef: string
   demos: PublishResponse["demos"]
 }
@@ -110,7 +110,7 @@ export async function publishToApi(
     description: config.description,
     registry: config.registry,
     license: config.license ?? "mit",
-    visibility: config.visibility ?? "team",
+    visibility: config.visibility ?? "unlisted",
     registry_slug: config.registry_slug,
     website_url: config.website_url,
     tags: config.tags,

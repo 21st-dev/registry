@@ -1,6 +1,6 @@
 {
   "name": "@21st-dev/registry",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Open-source CLI for managing private React component registries — publish, install, search, and share with your team. Works with any AI agent that supports SKILL.md.",
   "license": "MIT",
   "homepage": "https://github.com/21st-dev/registry",

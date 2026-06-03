@@ -181,7 +181,7 @@ export async function publishToApi(
     isNew: json.is_new,
     visibility: json.visibility,
     installRef: json.install_ref,
-    url: json.url || `${APP_BASE}/${json.username}/${json.slug}`,
+    url: json.url || `${APP_BASE}/community/components/${json.username}/${json.slug}`,
     demos: json.demos,
   }
 }

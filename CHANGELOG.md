@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.4 — 2026-06-03
+
+- Print canonical component URLs after publish, falling back to `/community/components/{username}/{slug}` if the API response does not include a URL.
+- Update the bundled `21st-registry` skill with the latest publish URL and shadcn registry setup instructions.
+
 ## 0.0.1 — 2026-04-30
 
 Initial release.

@@ -53,7 +53,7 @@ npx @21st-dev/registry ./path/to/Component.tsx \
 ### What the user gets back
 
 ```
-✅ https://21st.dev/{username}/{slug}
+✅ https://21st.dev/community/components/{username}/{slug}
 Install in another project:
   npx @21st-dev/registry add @{username}/{slug}
 ```
@@ -84,19 +84,34 @@ The CLI:
 3. Runs `pnpm/npm/yarn/bun add` for any npm dependencies
 4. If it depends on other 21st components, prints them — install with `add` separately
 
-For shadcn directly, public/unlisted components can use the plain registry URL:
+For shadcn directly, public/unlisted components can use the plain registry item URL:
 
 ```bash
 npx shadcn@latest add "https://21st.dev/r/acme/animated-button"
 ```
 
-For private components, pass the registry API key in the URL:
+For repeat installs or private components, register the 21st registry in the consumer project's `components.json` and use a Bearer token:
 
-```bash
-npx shadcn@latest add "https://21st.dev/r/acme/animated-button?api_key=$API_KEY_21ST"
+```json
+{
+  "registries": {
+    "@YOUR_NAMESPACE": {
+      "url": "https://21st.dev/r/acme/default/{name}.json",
+      "headers": {
+        "Authorization": "Bearer ${API_KEY_21ST}"
+      }
+    }
+  }
+}
 ```
 
-Do not commit or share shadcn URLs that include `api_key`.
+Then install with the stock shadcn CLI:
+
+```bash
+npx shadcn@latest add @YOUR_NAMESPACE/animated-button
+```
+
+`@YOUR_NAMESPACE` is just the local alias from `components.json`; choose any clear slug. Do not commit real API keys into `components.json` unless the user explicitly wants that local file to contain a personal key.
 
 Flags:
 - `--force` — overwrite existing file

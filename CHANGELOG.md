@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.5 — 2026-06-04
+
+- Preserve local support files when publishing components and demos, including shared component/demo dependencies.
+- Normalize single-demo publishes to the `default` demo slug.
+
 ## 0.0.4 — 2026-06-03
 
 - Print canonical component URLs after publish, falling back to `/community/components/{username}/{slug}` if the API response does not include a URL.

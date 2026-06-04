@@ -1,59 +1,11 @@
 import { readFileSync } from "node:fs"
-import { basename, extname, resolve } from "node:path"
+import { basename, extname } from "node:path"
 import { getApiBaseUrl, getAppBaseUrl } from "./config.js"
 import type { LoadedConfig } from "./config-loader.js"
+import { preprocessPublishFiles } from "./preprocess.js"
 
 const API_BASE = getApiBaseUrl().replace(/\/$/, "")
 const APP_BASE = getAppBaseUrl().replace(/\/$/, "")
-
-/**
- * Demos must import the component via `@/components/ui/{slug}` because the
- * sandbox places the component at that path. We rewrite any import in the
- * user's demo file that resolves to the user's component file (regardless of
- * how they wrote it: `./button`, `../button`, `@/components/button` etc).
- */
-function rewriteComponentImport(
-  demoCode: string,
-  demoAbsPath: string,
-  componentAbsPath: string,
-  slug: string,
-): string {
-  const demoDir = resolve(demoAbsPath, "..")
-  const componentNoExt = componentAbsPath.replace(/\.(tsx|ts|jsx|js)$/i, "")
-
-  return demoCode.replace(
-    /from\s+(['"])([^'"\n]+)\1/g,
-    (match, quote: string, importPath: string) => {
-      // Skip bare-package imports
-      if (!importPath.startsWith(".") && !importPath.startsWith("@/")) {
-        return match
-      }
-      // Resolve aliased and relative imports against where they'd live in the
-      // user's filesystem. We don't know the user's @/* alias mapping, so
-      // treat `@/...` as a literal we leave alone unless it points at the
-      // template default.
-      if (importPath === "@/components/ui/component") {
-        return `from ${quote}@/components/ui/${slug}${quote}`
-      }
-      if (!importPath.startsWith(".")) {
-        return match
-      }
-      const resolved = resolve(demoDir, importPath).replace(
-        /\.(tsx|ts|jsx|js)$/i,
-        "",
-      )
-      if (resolved === componentNoExt) {
-        return `from ${quote}@/components/ui/${slug}${quote}`
-      }
-      // Also handle the case where the user writes `from "./button"` with the
-      // file existing as `button.tsx` — covered by the strip above.
-      return match
-    },
-  )
-}
-
-// Surfaced for tests / debugging.
-export const _internals = { rewriteComponentImport }
 
 interface PublishResponse {
   success: boolean
@@ -81,6 +33,12 @@ export async function publishToApi(
   loaded: LoadedConfig,
 ): Promise<PublishUploadResult> {
   const { config, resolvedComponentPath, resolvedDemos } = loaded
+  const componentSlug = config.slug ?? ""
+  const hasDefaultDemo = resolvedDemos.some((demo) => demo.slug === "default")
+  const publishDemos = resolvedDemos.map((demo, index) => ({
+    ...demo,
+    slug: !hasDefaultDemo && index === 0 ? "default" : demo.slug,
+  }))
 
   const previewIndexById = new Map<number, number>()
   const videoIndexById = new Map<number, number>()
@@ -114,7 +72,7 @@ export async function publishToApi(
     registry_slug: config.registry_slug,
     website_url: config.website_url,
     tags: config.tags,
-    demos: resolvedDemos.map((d, i) => ({
+    demos: publishDemos.map((d, i) => ({
       name: d.name,
       slug: d.slug,
       file_index: i,
@@ -123,29 +81,35 @@ export async function publishToApi(
       tags: d.tags,
     })),
   }
+  const preprocessed = preprocessPublishFiles({
+    rootDir: loaded.rootDir,
+    componentSlug,
+    componentPath: resolvedComponentPath,
+    demos: publishDemos.map((demo) => ({
+      slug: demo.slug,
+      file: demo.resolvedFile,
+    })),
+  })
 
   const form = new FormData()
   form.append("metadata", JSON.stringify(metadata))
   form.append(
     "component_code",
-    fileToBlob(resolvedComponentPath, "text/plain"),
+    new Blob([preprocessed.componentCode], { type: "text/plain" }),
     basename(resolvedComponentPath),
   )
-  const slugForRewrite = config.slug ?? metadata.slug ?? ""
-  for (const d of resolvedDemos) {
-    const raw = readFileSync(d.resolvedFile, "utf-8")
-    const rewritten = slugForRewrite
-      ? rewriteComponentImport(
-          raw,
-          d.resolvedFile,
-          resolvedComponentPath,
-          slugForRewrite,
-        )
-      : raw
+  for (const demo of preprocessed.demoCodes) {
     form.append(
       "demo_files",
-      new Blob([rewritten], { type: "text/plain" }),
-      basename(d.resolvedFile),
+      new Blob([demo.code], { type: "text/plain" }),
+      `${demo.slug}.tsx`,
+    )
+  }
+  for (const file of preprocessed.supportFiles) {
+    form.append(
+      file.includeInRegistry ? "component_support_files" : "demo_support_files",
+      new Blob([file.bytes]),
+      file.fileName,
     )
   }
   for (const p of previewBlobs) {

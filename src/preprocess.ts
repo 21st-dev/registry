@@ -37,6 +37,8 @@ export interface PreprocessedPublishFiles {
   componentCode: string
   demoCodes: PreprocessedDemoFile[]
   supportFiles: PreprocessedSupportFile[]
+  packageImports: string[]
+  componentPackageImports: string[]
 }
 
 const CODE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx"])
@@ -82,6 +84,8 @@ export function preprocessPublishFiles(
   const supportBySource = new Map<string, InternalSupportFile>()
   const supportSourceByName = new Map<string, string>()
   const supportQueue: string[] = []
+  const packageImports = new Set<string>()
+  const componentPackageImports = new Set<string>()
 
   function ensureSupportFile(
     sourcePath: string,
@@ -124,6 +128,15 @@ export function preprocessPublishFiles(
   ): string {
     if (specifier === "@/components/ui/component") {
       return `@/components/ui/${input.componentSlug}`
+    }
+
+    if (isExternalSpecifier(specifier)) {
+      const packageName = getPackageName(specifier)
+      packageImports.add(packageName)
+      if (includeInRegistry) {
+        componentPackageImports.add(packageName)
+      }
+      return specifier
     }
 
     const resolved = resolveImportSpecifier(
@@ -239,6 +252,8 @@ export function preprocessPublishFiles(
       bytes: file.bytes,
       includeInRegistry: file.includeInRegistry,
     })),
+    packageImports: [...packageImports].sort(),
+    componentPackageImports: [...componentPackageImports].sort(),
   }
 }
 
@@ -451,6 +466,16 @@ function isExternalSpecifier(specifier: string): boolean {
     return false
   }
   return true
+}
+
+function getPackageName(specifier: string): string {
+  const { path } = splitSpecifierSuffix(specifier)
+  const parts = path.split("/")
+  if (path.startsWith("@") && parts.length >= 2) {
+    const [scope, name] = parts
+    return `${scope}/${name}`
+  }
+  return parts[0] ?? path
 }
 
 function isExternalCssReference(ref: string): boolean {

@@ -1,5 +1,5 @@
-import { readFileSync } from "node:fs"
-import { basename, extname } from "node:path"
+import { existsSync, readFileSync } from "node:fs"
+import { basename, dirname, extname, resolve } from "node:path"
 import { getApiBaseUrl, getAppBaseUrl } from "./config.js"
 import type { LoadedConfig } from "./config-loader.js"
 import { preprocessPublishFiles } from "./preprocess.js"
@@ -62,11 +62,29 @@ export async function publishToApi(
     }
   })
 
+  const preprocessed = preprocessPublishFiles({
+    rootDir: loaded.rootDir,
+    componentSlug,
+    componentPath: resolvedComponentPath,
+    demos: publishDemos.map((demo) => ({
+      slug: demo.slug,
+      file: demo.resolvedFile,
+    })),
+  })
+
   const metadata = {
     name: config.name,
     slug: config.slug,
     description: config.description,
     registry: config.registry,
+    runtime: config.runtime,
+    ...(config.runtime === "expo"
+      ? getPackageDependencyMetadata(
+          dirname(resolvedComponentPath),
+          preprocessed.packageImports,
+          preprocessed.componentPackageImports,
+        )
+      : {}),
     license: config.license ?? "mit",
     visibility: config.visibility ?? "unlisted",
     registry_slug: config.registry_slug,
@@ -81,15 +99,6 @@ export async function publishToApi(
       tags: d.tags,
     })),
   }
-  const preprocessed = preprocessPublishFiles({
-    rootDir: loaded.rootDir,
-    componentSlug,
-    componentPath: resolvedComponentPath,
-    demos: publishDemos.map((demo) => ({
-      slug: demo.slug,
-      file: demo.resolvedFile,
-    })),
-  })
 
   const form = new FormData()
   form.append("metadata", JSON.stringify(metadata))
@@ -147,6 +156,68 @@ export async function publishToApi(
     installRef: json.install_ref,
     url: json.url || `${APP_BASE}/community/components/${json.username}/${json.slug}`,
     demos: json.demos,
+  }
+}
+
+function getPackageDependencyMetadata(
+  rootDir: string,
+  packageImports: string[],
+  componentPackageImports: string[],
+): {
+  dependencies?: Record<string, string>
+  component_dependencies?: Record<string, string>
+} {
+  const packageJsonPath = findNearestPackageJson(rootDir)
+  if (!packageJsonPath) return {}
+
+  try {
+    const packageJson = JSON.parse(
+      readFileSync(packageJsonPath, "utf-8"),
+    ) as {
+      dependencies?: Record<string, string>
+    }
+
+    const importedPackages = new Set(packageImports)
+    const importedComponentPackages = new Set(componentPackageImports)
+    const dependencies = pickDependencies(
+      packageJson.dependencies ?? {},
+      importedPackages,
+    )
+    const componentDependencies = pickDependencies(
+      packageJson.dependencies ?? {},
+      importedComponentPackages,
+    )
+    return {
+      ...(Object.keys(dependencies).length > 0 ? { dependencies } : {}),
+      ...(Object.keys(componentDependencies).length > 0
+        ? { component_dependencies: componentDependencies }
+        : {}),
+    }
+  } catch {
+    return {}
+  }
+}
+
+function pickDependencies(
+  dependencies: Record<string, string>,
+  packageImports: Set<string>,
+): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(dependencies).filter(([name]) => packageImports.has(name)),
+  )
+}
+
+function findNearestPackageJson(startDir: string): string | null {
+  let currentDir = resolve(startDir)
+  while (true) {
+    const candidate = resolve(currentDir, "package.json")
+    if (existsSync(candidate)) {
+      return candidate
+    }
+
+    const parentDir = dirname(currentDir)
+    if (parentDir === currentDir) return null
+    currentDir = parentDir
   }
 }
 

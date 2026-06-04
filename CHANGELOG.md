@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.0.6 — 2026-06-04
+
+- Add `--runtime expo` publishing support for Expo / React Native components.
+- Include component-only npm dependencies in the installable registry item while keeping demo-only dependencies limited to the publish sandbox.
+
 ## 0.0.5 — 2026-06-04
 
 - Preserve local support files when publishing components and demos, including shared component/demo dependencies.

@@ -3,6 +3,7 @@ import { dirname, isAbsolute, resolve } from "node:path"
 import { slugify, validateSlug } from "./utils.js"
 
 export type Registry = "ui" | "hooks" | "blocks" | "icons"
+export type Runtime = "react" | "expo"
 export type Visibility = "unlisted" | "public" | "private"
 
 export interface DemoEntry {
@@ -19,6 +20,7 @@ export interface PublishConfig {
   slug?: string
   description: string
   registry: Registry
+  runtime: Runtime
   license?: string
   visibility?: Visibility
   /** Optional team-Registry slug. Non-public CLI publishes use team default if omitted. */
@@ -30,6 +32,7 @@ export interface PublishConfig {
 }
 
 const VALID_REGISTRIES: Registry[] = ["ui", "hooks", "blocks", "icons"]
+const VALID_RUNTIMES: Runtime[] = ["react", "expo"]
 const VALID_VISIBILITIES: Visibility[] = ["unlisted", "public", "private"]
 
 export interface LoadedConfig {
@@ -63,6 +66,7 @@ export function buildConfigFromFlags(
     slug?: string
     description: string
     registry: string
+    runtime?: string
     license?: string
     visibility?: Visibility
     registry_slug?: string
@@ -79,6 +83,10 @@ export function buildConfigFromFlags(
     throw new Error(
       `--registry must be one of: ${VALID_REGISTRIES.join(", ")}`,
     )
+  }
+  const runtime = (flags.runtime ?? "react") as Runtime
+  if (!VALID_RUNTIMES.includes(runtime)) {
+    throw new Error(`--runtime must be one of: ${VALID_RUNTIMES.join(", ")}`)
   }
   const demos: DemoEntry[] = flags.demos.map((file, i) => {
     const baseName = file
@@ -99,6 +107,7 @@ export function buildConfigFromFlags(
       slug: flags.slug,
       description: flags.description,
       registry: flags.registry,
+      runtime,
       license: flags.license,
       visibility: flags.visibility,
       registry_slug: flags.registry_slug,
@@ -124,6 +133,11 @@ function validateAndResolve(raw: unknown, rootDir: string): LoadedConfig {
     throw new Error(
       `registry must be one of: ${VALID_REGISTRIES.join(", ")}`,
     )
+  }
+  const runtimeRaw = optString(obj, "runtime")
+  const runtime = (runtimeRaw ?? "react") as Runtime
+  if (!VALID_RUNTIMES.includes(runtime)) {
+    throw new Error(`config.runtime must be one of: ${VALID_RUNTIMES.join(", ")}`)
   }
   const componentRel = expectString(obj, "component")
   const demosRaw = obj.demos
@@ -217,6 +231,7 @@ function validateAndResolve(raw: unknown, rootDir: string): LoadedConfig {
       slug,
       description,
       registry,
+      runtime,
       license: optString(obj, "license") ?? "mit",
       visibility,
       registry_slug: optString(obj, "registry_slug"),

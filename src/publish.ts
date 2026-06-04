@@ -33,6 +33,7 @@ export async function publish(args: string[]): Promise<void> {
   p.intro("@21st-dev/registry")
   p.log.info(`Component:  ${loaded.config.name} (${loaded.config.slug})`)
   p.log.info(`Registry:   ${loaded.config.registry}`)
+  p.log.info(`Runtime:    ${loaded.config.runtime}`)
   p.log.info(`Demos:      ${loaded.resolvedDemos.length}`)
   p.log.info(
     `Visibility: ${loaded.config.visibility ?? "unlisted"}${
@@ -92,7 +93,18 @@ function resolveConfig(args: string[]): LoadedConfig {
         `  21st-registry init   # scaffold a 21st.json starter`,
     )
   }
-  return loadConfigFromFile(configPath)
+  const loaded = loadConfigFromFile(configPath)
+  const runtime = getFlagValue(args, "--runtime")
+  if (runtime) {
+    return {
+      ...loaded,
+      config: {
+        ...loaded.config,
+        runtime: parseRuntimeFlag(runtime),
+      },
+    }
+  }
+  return loaded
 }
 
 /**
@@ -140,6 +152,7 @@ function resolveSingleFilePath(
       slug,
       description,
       registry: (getFlagValue(args, "--registry") ?? "ui").toLowerCase(),
+      runtime: getFlagValue(args, "--runtime")?.toLowerCase(),
       license: getFlagValue(args, "--license"),
       visibility: pickVisibility(args),
       registry_slug: getFlagValue(args, "--to"),
@@ -196,6 +209,7 @@ function resolveConfigFromFlags(
       slug,
       description,
       registry: (get("--registry") ?? "ui").toLowerCase(),
+      runtime: get("--runtime")?.toLowerCase(),
       license: get("--license"),
       visibility: pickVisibility(args),
       registry_slug: get("--to"),
@@ -229,6 +243,14 @@ function pickVisibility(args: string[]): Visibility | undefined {
     throw new Error("--visibility must be one of: unlisted, public, private")
   }
   return undefined // config-loader defaults to "unlisted"
+}
+
+function parseRuntimeFlag(runtime: string) {
+  const normalized = runtime.toLowerCase()
+  if (normalized !== "react" && normalized !== "expo") {
+    throw new Error("--runtime must be one of: react, expo")
+  }
+  return normalized
 }
 
 /**

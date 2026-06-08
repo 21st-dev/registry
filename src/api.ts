@@ -1,8 +1,10 @@
+import * as p from "@clack/prompts"
 import { existsSync, readFileSync } from "node:fs"
 import { basename, dirname, extname, resolve } from "node:path"
 import { getApiBaseUrl, getAppBaseUrl } from "./config.js"
 import type { LoadedConfig } from "./config-loader.js"
 import { preprocessPublishFiles } from "./preprocess.js"
+import { resolveRegistryDependencies } from "./registry-dependencies.js"
 
 const API_BASE = getApiBaseUrl().replace(/\/$/, "")
 const APP_BASE = getAppBaseUrl().replace(/\/$/, "")
@@ -62,6 +64,11 @@ export async function publishToApi(
     }
   })
 
+  const resolvedRegistryDependencies = await resolveRegistryDependencies({
+    refs: config.registry_dependencies ?? [],
+    cwd: loaded.rootDir,
+  })
+
   const preprocessed = preprocessPublishFiles({
     rootDir: loaded.rootDir,
     componentSlug,
@@ -70,7 +77,29 @@ export async function publishToApi(
       slug: demo.slug,
       file: demo.resolvedFile,
     })),
+    registryOwnedFiles: resolvedRegistryDependencies.registryOwnedFiles,
   })
+  const registryDependencies = resolvedRegistryDependencies.directDependencyUrls
+
+  p.log.info(
+    `Registry dependencies: ${formatSummaryList(
+      registryDependencies,
+    )}`,
+  )
+  p.log.info(
+    `Included support files: ${formatSummaryList(
+      preprocessed.supportFiles
+        .filter((file) => file.includeInRegistry)
+        .map((file) => file.fileName),
+    )}`,
+  )
+  p.log.info(
+    `Excluded registry-owned files: ${formatSummaryList(
+      preprocessed.excludedRegistryFiles.map(
+        (file) => `${file.path} -> ${file.ownerUrl}`,
+      ),
+    )}`,
+  )
 
   const metadata = {
     name: config.name,
@@ -90,6 +119,7 @@ export async function publishToApi(
     registry_slug: config.registry_slug,
     website_url: config.website_url,
     tags: config.tags,
+    registry_dependencies: registryDependencies,
     demos: publishDemos.map((d, i) => ({
       name: d.name,
       slug: d.slug,
@@ -157,6 +187,10 @@ export async function publishToApi(
     url: json.url || `${APP_BASE}/community/components/${json.username}/${json.slug}`,
     demos: json.demos,
   }
+}
+
+function formatSummaryList(values: string[]): string {
+  return values.length > 0 ? values.join(", ") : "none"
 }
 
 function getPackageDependencyMetadata(

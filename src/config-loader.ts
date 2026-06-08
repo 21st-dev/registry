@@ -27,6 +27,7 @@ export interface PublishConfig {
   registry_slug?: string
   website_url?: string
   tags?: string[]
+  registry_dependencies?: string[]
   component: string
   demos: DemoEntry[]
 }
@@ -72,6 +73,7 @@ export function buildConfigFromFlags(
     registry_slug?: string
     website_url?: string
     tags?: string[]
+    registry_dependencies?: string[]
     component: string
     demos: string[]
     previews?: string[]
@@ -113,6 +115,7 @@ export function buildConfigFromFlags(
       registry_slug: flags.registry_slug,
       website_url: flags.website_url,
       tags: flags.tags,
+      registry_dependencies: flags.registry_dependencies,
       component: flags.component,
       demos,
     },
@@ -156,6 +159,7 @@ function validateAndResolve(raw: unknown, rootDir: string): LoadedConfig {
   }
 
   const tags = optStringArray(obj, "tags", { max: 5 })
+  const registryDependencies = optStringArray(obj, "registry_dependencies")
 
   const demos: DemoEntry[] = demosRaw.map((d, i) => {
     if (!d || typeof d !== "object") {
@@ -237,6 +241,7 @@ function validateAndResolve(raw: unknown, rootDir: string): LoadedConfig {
       registry_slug: optString(obj, "registry_slug"),
       website_url: optString(obj, "website_url"),
       tags,
+      registry_dependencies: registryDependencies,
       component: componentRel,
       demos,
     },

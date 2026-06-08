@@ -66,7 +66,7 @@ function resolveConfig(args: string[]): LoadedConfig {
   // Allow either a 21st.json (or a directory holding one) OR a single
   // component file path positionally — the latter triggers the auto-detect
   // path so users don't have to scaffold any json.
-  const positional = args.find((a) => !a.startsWith("--"))
+  const positional = args[0]?.startsWith("--") ? undefined : args[0]
   const explicitComponent = getFlagValue(args, "--component")
 
   if (explicitComponent !== undefined) {
@@ -94,17 +94,7 @@ function resolveConfig(args: string[]): LoadedConfig {
     )
   }
   const loaded = loadConfigFromFile(configPath)
-  const runtime = getFlagValue(args, "--runtime")
-  if (runtime) {
-    return {
-      ...loaded,
-      config: {
-        ...loaded.config,
-        runtime: parseRuntimeFlag(runtime),
-      },
-    }
-  }
-  return loaded
+  return applyPublishFlagOverrides(loaded, args)
 }
 
 /**
@@ -146,6 +136,8 @@ function resolveSingleFilePath(
   const previews = getRepeatedFlagValues(args, "--preview")
   const videos = getRepeatedFlagValues(args, "--video")
 
+  const rootDir = findProjectRoot(componentPath)
+
   return buildConfigFromFlags(
     {
       name,
@@ -158,13 +150,34 @@ function resolveSingleFilePath(
       registry_slug: getFlagValue(args, "--to"),
       website_url: getFlagValue(args, "--website"),
       tags: tags && tags.length > 0 ? tags : undefined,
+      registry_dependencies: getRepeatedFlagValues(args, "--registry-dep"),
       component: componentPath,
       demos: demoFiles,
       previews: previews.length ? previews : undefined,
       videos: videos.length ? videos : undefined,
     },
-    dirname(componentPath),
+    rootDir,
   )
+}
+
+export function findProjectRoot(componentPath: string): string {
+  let currentDir = dirname(resolve(componentPath))
+
+  while (true) {
+    if (
+      existsSync(join(currentDir, "components.json")) ||
+      existsSync(join(currentDir, "tsconfig.json")) ||
+      existsSync(join(currentDir, "package.json"))
+    ) {
+      return currentDir
+    }
+
+    const parentDir = dirname(currentDir)
+    if (parentDir === currentDir) {
+      return dirname(resolve(componentPath))
+    }
+    currentDir = parentDir
+  }
 }
 
 function resolveConfigFromFlags(
@@ -215,6 +228,7 @@ function resolveConfigFromFlags(
       registry_slug: get("--to"),
       website_url: get("--website"),
       tags: tags && tags.length > 0 ? tags : undefined,
+      registry_dependencies: getRepeatedFlagValues(args, "--registry-dep"),
       component: componentAbs,
       demos,
       previews: previews.length ? previews : undefined,
@@ -222,6 +236,27 @@ function resolveConfigFromFlags(
     },
     process.cwd(),
   )
+}
+
+function applyPublishFlagOverrides(
+  loaded: LoadedConfig,
+  args: string[],
+): LoadedConfig {
+  const runtime = getFlagValue(args, "--runtime")
+  const registryDeps = getRepeatedFlagValues(args, "--registry-dep")
+  if (!runtime && registryDeps.length === 0) return loaded
+
+  return {
+    ...loaded,
+    config: {
+      ...loaded.config,
+      ...(runtime ? { runtime: parseRuntimeFlag(runtime) } : {}),
+      registry_dependencies:
+        registryDeps.length > 0
+          ? [...(loaded.config.registry_dependencies ?? []), ...registryDeps]
+          : loaded.config.registry_dependencies,
+    },
+  }
 }
 
 function pickVisibility(args: string[]): Visibility | undefined {

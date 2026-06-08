@@ -36,6 +36,7 @@ function showHelp(): void {
   console.log("  --registry NAME      Component type: ui | hooks | blocks | icons (default: ui)")
   console.log("  --runtime NAME       Runtime: react | expo (default: react)")
   console.log("  --to SLUG            Target a registry in the authenticated team")
+  console.log("  --registry-dep REF   Shadcn registry dependency URL or @namespace/name (repeatable)")
   console.log("  --tags T1,T2         1-5 tags (default: detected from imports)")
   console.log("  --slug SLUG          URL slug (default: derived from name)")
   console.log("  --component PATH     Component .tsx (positional path also works)")

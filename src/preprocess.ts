@@ -20,6 +20,7 @@ export interface PreprocessPublishFilesInput {
   componentSlug: string
   componentPath: string
   demos: PreprocessDemoInput[]
+  registryOwnedFiles?: Map<string, string>
 }
 
 export interface PreprocessedDemoFile {
@@ -39,6 +40,8 @@ export interface PreprocessedPublishFiles {
   supportFiles: PreprocessedSupportFile[]
   packageImports: string[]
   componentPackageImports: string[]
+  registryDependencies: string[]
+  excludedRegistryFiles: Array<{ path: string; ownerUrl: string }>
 }
 
 const CODE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx"])
@@ -63,6 +66,7 @@ const RESOLVE_EXTENSIONS = [
   ".woff",
   ".woff2",
 ]
+const PROJECT_CONFIG_FILES = new Set(["components.json", "21st-registry.json"])
 
 interface InternalSupportFile extends PreprocessedSupportFile {
   targetPath: string
@@ -86,6 +90,9 @@ export function preprocessPublishFiles(
   const supportQueue: string[] = []
   const packageImports = new Set<string>()
   const componentPackageImports = new Set<string>()
+  const registryDependencies = new Set<string>()
+  const excludedRegistryFiles = new Map<string, string>()
+  const registryOwnedFiles = normalizeRegistryOwnedFiles(input.registryOwnedFiles)
 
   function ensureSupportFile(
     sourcePath: string,
@@ -99,6 +106,7 @@ export function preprocessPublishFiles(
     }
 
     assertInsideRoot(rootDir, normalizedSourcePath)
+    assertNotProjectConfigFile(rootDir, normalizedSourcePath)
     const fileName = basename(normalizedSourcePath)
     const previousSource = supportSourceByName.get(fileName)
     if (previousSource && previousSource !== normalizedSourcePath) {
@@ -117,6 +125,18 @@ export function preprocessPublishFiles(
     supportBySource.set(normalizedSourcePath, supportFile)
     supportQueue.push(normalizedSourcePath)
     return supportFile
+  }
+
+  function excludeRegistryFile(
+    sourcePath: string,
+  ): { projectPath: string; ownerUrl: string } | undefined {
+    const ownerUrl = getRegistryOwnerUrl(rootDir, sourcePath, registryOwnedFiles)
+    if (!ownerUrl) return undefined
+
+    const projectPath = toProjectRelativePath(rootDir, sourcePath)
+    registryDependencies.add(ownerUrl)
+    excludedRegistryFiles.set(projectPath, ownerUrl)
+    return { projectPath, ownerUrl }
   }
 
   function rewriteSpecifier(
@@ -149,6 +169,16 @@ export function preprocessPublishFiles(
 
     if (resolved.path === componentPath) {
       return `@/components/ui/${input.componentSlug}${resolved.suffix}`
+    }
+
+    const registryFile = excludeRegistryFile(resolved.path)
+    if (registryFile) {
+      return toRelativeImport(
+        sourceTargetPath,
+        registryFile.projectPath,
+        CODE_EXTENSIONS.has(extname(resolved.path).toLowerCase()),
+        resolved.suffix,
+      )
     }
 
     if (specifier.startsWith("@/components/ui/")) {
@@ -235,6 +265,7 @@ export function preprocessPublishFiles(
           supportFile.targetPath,
           supportFile.includeInRegistry,
           ensureSupportFile,
+          excludeRegistryFile,
         ),
       )
     } else {
@@ -254,6 +285,10 @@ export function preprocessPublishFiles(
     })),
     packageImports: [...packageImports].sort(),
     componentPackageImports: [...componentPackageImports].sort(),
+    registryDependencies: [...registryDependencies].sort(),
+    excludedRegistryFiles: [...excludedRegistryFiles.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([path, ownerUrl]) => ({ path, ownerUrl })),
   }
 }
 
@@ -349,6 +384,9 @@ function rewriteCssFile(
     sourcePath: string,
     includeInRegistry: boolean,
   ) => InternalSupportFile,
+  excludeRegistryFile: (
+    sourcePath: string,
+  ) => { projectPath: string; ownerUrl: string } | undefined,
 ): string {
   const sourceCode = readFileSync(sourcePath, "utf-8")
   const imports: string[] = []
@@ -369,6 +407,7 @@ function rewriteCssFile(
         ref,
         includeInRegistry,
         ensureSupportFile,
+        excludeRegistryFile,
       )
       const value =
         rewritten === ref
@@ -390,6 +429,7 @@ function rewriteCssFile(
           ref,
           includeInRegistry,
           ensureSupportFile,
+          excludeRegistryFile,
         )
         if (rewritten === ref) return match
         return `url(${quote}${rewritten}${quote})`
@@ -410,6 +450,9 @@ function rewriteCssReference(
     sourcePath: string,
     includeInRegistry: boolean,
   ) => InternalSupportFile,
+  excludeRegistryFile: (
+    sourcePath: string,
+  ) => { projectPath: string; ownerUrl: string } | undefined,
 ): string {
   if (isExternalCssReference(ref)) return ref
 
@@ -422,6 +465,11 @@ function rewriteCssReference(
   const resolvedPath = resolveExistingModule(basePath)
   if (!resolvedPath) {
     throw new Error(`Unable to resolve CSS reference "${ref}" from "${sourcePath}"`)
+  }
+
+  const registryFile = excludeRegistryFile(resolvedPath)
+  if (registryFile) {
+    return toRelativeImport(sourceTargetPath, registryFile.projectPath, false, suffix)
   }
 
   const supportFile = ensureSupportFile(resolvedPath, includeInRegistry)
@@ -497,6 +545,15 @@ function assertInsideRoot(rootDir: string, resolvedPath: string): void {
   }
 }
 
+function assertNotProjectConfigFile(rootDir: string, resolvedPath: string): void {
+  const projectPath = toProjectRelativePath(rootDir, resolvedPath)
+  if (!PROJECT_CONFIG_FILES.has(projectPath)) return
+
+  throw new Error(
+    `Cannot publish "${projectPath}" as a support file. Project config files may contain private registry credentials.`,
+  )
+}
+
 function isFile(filePath: string): boolean {
   return existsSync(filePath) && statSync(filePath).isFile()
 }
@@ -507,4 +564,36 @@ function isDirectory(filePath: string): boolean {
 
 function textToBytes(value: string): Uint8Array {
   return new TextEncoder().encode(value)
+}
+
+function normalizeRegistryOwnedFiles(
+  registryOwnedFiles: Map<string, string> | undefined,
+): Map<string, string> {
+  if (!registryOwnedFiles) return new Map()
+  return new Map(
+    [...registryOwnedFiles.entries()].map(([path, ownerUrl]) => [
+      normalizeProjectRelativePath(path),
+      ownerUrl,
+    ]),
+  )
+}
+
+function getRegistryOwnerUrl(
+  rootDir: string,
+  sourcePath: string,
+  registryOwnedFiles: Map<string, string>,
+): string | undefined {
+  return registryOwnedFiles.get(toProjectRelativePath(rootDir, sourcePath))
+}
+
+function toProjectRelativePath(rootDir: string, sourcePath: string): string {
+  return normalizeProjectRelativePath(relative(rootDir, resolve(sourcePath)))
+}
+
+function normalizeProjectRelativePath(path: string): string {
+  return path
+    .split(sep)
+    .join("/")
+    .replace(/\\/g, "/")
+    .replace(/^\.?\//, "")
 }

@@ -1,5 +1,6 @@
 import * as p from "@clack/prompts"
 import { getApiKey } from "./config.js"
+import { exitWithError } from "./exit.js"
 
 export function getFlagValue(args: string[], flag: string): string | undefined {
   const idx = args.indexOf(flag)
@@ -49,10 +50,10 @@ export function slugify(name: string): string {
 export function requireApiKey(): string {
   const apiKey = getApiKey()
   if (!apiKey) {
-    p.log.error(
-      "Not logged in. Run `npx @21st-dev/registry login` first, or set API_KEY_21ST.",
-    )
-    process.exit(1)
+    const message =
+      "Not logged in. Run `npx @21st-dev/registry login` first, or set API_KEY_21ST."
+    p.log.error(message)
+    exitWithError(message)
   }
   return apiKey
 }

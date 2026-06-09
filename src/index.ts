@@ -1,10 +1,12 @@
 import { createRequire } from "node:module"
 import { add } from "./add.js"
+import { getApiKey } from "./config.js"
 import { installSkill, printSkill } from "./install-skill.js"
 import { login } from "./login.js"
 import { publish } from "./publish.js"
 import { search } from "./search.js"
 import { inviteLink } from "./team.js"
+import { runTrackedCommand } from "./tracking.js"
 import { getFlagValue } from "./utils.js"
 
 const require = createRequire(import.meta.url)
@@ -13,6 +15,7 @@ const { version } = require("../package.json") as { version: string }
 const command = process.argv[2]
 const args = process.argv.slice(3)
 const hasFlag = (flag: string) => args.includes(flag)
+const trackingOptions = { getApiKey, version }
 
 function showHelp(): void {
   console.log(`@21st-dev/registry v${version} — share & install React components across your team\n`)
@@ -55,13 +58,20 @@ if (command === "login") {
     console.log("Usage: npx @21st-dev/registry login [--api-key KEY]")
     console.log("Get your API key at https://21st.dev/team/api-keys")
   } else {
-    await login({ apiKey: getFlagValue(args, "--api-key") })
+    const apiKey = getFlagValue(args, "--api-key")
+    await runTrackedCommand("login", () =>
+      login({ apiKey }),
+      {
+        ...trackingOptions,
+        ...(apiKey !== undefined ? { apiKey } : {}),
+      },
+    )
   }
 } else if (command === "add") {
   if (hasFlag("--help") || hasFlag("-h")) {
     console.log("Usage: npx @21st-dev/registry add @user/slug [--force] [--no-install] [--dir PATH]")
   } else {
-    await add(args)
+    await runTrackedCommand("add", () => add(args), trackingOptions)
   }
 } else if (command === "search") {
   if (hasFlag("--help") || hasFlag("-h")) {
@@ -69,7 +79,7 @@ if (command === "login") {
       `Usage: npx @21st-dev/registry search "<query>" [--scope team|mine|public] [--limit N] [--json]`,
     )
   } else {
-    await search(args)
+    await runTrackedCommand("search", () => search(args), trackingOptions)
   }
 } else if (command === "invite" || command === "invite-link") {
   if (hasFlag("--help") || hasFlag("-h")) {
@@ -83,7 +93,7 @@ if (command === "login") {
     console.log("  --quiet, -q  Print only the URL (handy with `| pbcopy`)")
     console.log("  --json       Machine-readable output")
   } else {
-    await inviteLink(args)
+    await runTrackedCommand("invite", () => inviteLink(args), trackingOptions)
   }
 } else if (command === "install-skill") {
   if (hasFlag("--help") || hasFlag("-h")) {
@@ -95,7 +105,7 @@ if (command === "login") {
     console.log("Default: writes to .claude/skills/ and .cursor/skills/ in the current project.")
     console.log("With --global: writes to ~/.claude/skills/ and ~/.cursor/skills/.")
   } else {
-    await installSkill(args)
+    await runTrackedCommand("install-skill", () => installSkill(args), trackingOptions)
   }
 } else if (command === "print-skill") {
   printSkill()
@@ -103,7 +113,7 @@ if (command === "login") {
   if (hasFlag("--help") || hasFlag("-h")) {
     showHelp()
   } else {
-    await publish(args)
+    await runTrackedCommand("publish", () => publish(args), trackingOptions)
   }
 } else if (command === "--version" || command === "-v") {
   console.log(version)
@@ -111,7 +121,7 @@ if (command === "login") {
   showHelp()
 } else if (!command.startsWith("--")) {
   // Bare positional like `21st-registry ./Button.tsx` → publish
-  await publish(process.argv.slice(2))
+  await runTrackedCommand("publish", () => publish(process.argv.slice(2)), trackingOptions)
 } else {
   console.log(`Unknown command: ${command}`)
   showHelp()

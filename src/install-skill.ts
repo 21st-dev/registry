@@ -2,6 +2,8 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from
 import { homedir } from "node:os"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
+import type { CliAnalyticsMetadata } from "./analytics.js"
+import { exitWithError } from "./exit.js"
 import { getFlagValue, hasFlag } from "./utils.js"
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -28,7 +30,9 @@ const DEFAULT_SKILL_URL = "https://21st.dev/api/skills/21st-registry"
  *
  * Default behaviour: project-level, both Claude and Cursor.
  */
-export async function installSkill(args: string[]): Promise<void> {
+export async function installSkill(
+  args: string[],
+): Promise<CliAnalyticsMetadata | void> {
   const isGlobal = hasFlag(args, "--global") || hasFlag(args, "-g")
   const claudeOnly = hasFlag(args, "--claude")
   const cursorOnly = hasFlag(args, "--cursor")
@@ -64,8 +68,9 @@ export async function installSkill(args: string[]): Promise<void> {
   }
 
   if (!content) {
-    console.error("Failed to load SKILL.md content. Source:", sourceLabel)
-    process.exit(1)
+    const message = `Failed to load SKILL.md content. Source: ${sourceLabel}`
+    console.error(message)
+    exitWithError(message)
   }
 
   const targets: { name: string; dir: string }[] = []
@@ -103,6 +108,13 @@ export async function installSkill(args: string[]): Promise<void> {
       ? "Skill installed globally. Any AI agent (Claude Code, Cursor, or any other tool that reads SKILL.md) running on this machine can now use `21st-registry` automatically."
       : "Skill installed in this project. Commit `.claude/skills/` and `.cursor/skills/` so teammates get it too.",
   )
+  return {
+    claude: !cursorOnly,
+    cursor: !claudeOnly,
+    force,
+    from_url: Boolean(explicitUrl),
+    global: isGlobal,
+  }
 }
 
 async function fetchUrlSkill(url: string): Promise<string | null> {

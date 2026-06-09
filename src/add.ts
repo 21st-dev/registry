@@ -7,7 +7,9 @@ import {
   writeFileSync,
 } from "node:fs"
 import { dirname, join, resolve } from "node:path"
+import type { CliAnalyticsMetadata } from "./analytics.js"
 import { getApiBaseUrl } from "./config.js"
+import { exitWithError } from "./exit.js"
 import { getFlagValue, hasFlag, requireApiKey } from "./utils.js"
 
 interface InstallResponse {
@@ -32,22 +34,21 @@ const API_BASE = getApiBaseUrl().replace(/\/$/, "")
 
 const REF_RE = /^@?([a-zA-Z0-9._-]+)\/([a-z0-9]([a-z0-9-]*[a-z0-9])?)$/
 
-export async function add(args: string[]): Promise<void> {
+export async function add(args: string[]): Promise<CliAnalyticsMetadata | void> {
   const positional = args.find((a) => !a.startsWith("--"))
   if (!positional) {
-    p.log.error(
-      "Usage: npx @21st-dev/registry add @user/slug   (e.g. @serjobas/animated-button)",
-    )
-    process.exit(1)
+    const message =
+      "Usage: npx @21st-dev/registry add @user/slug   (e.g. @serjobas/animated-button)"
+    p.log.error(message)
+    exitWithError(message)
   }
 
   const ref = positional.replace(/^@/, "@") // normalise leading @
   const m = ref.match(REF_RE)
   if (!m) {
-    p.log.error(
-      `Invalid component ref "${positional}". Expected @username/slug (e.g. @serjobas/animated-button).`,
-    )
-    process.exit(1)
+    const message = `Invalid component ref "${positional}". Expected @username/slug (e.g. @serjobas/animated-button).`
+    p.log.error(message)
+    exitWithError(message)
   }
   const [, username, slug] = m
 
@@ -78,10 +79,9 @@ export async function add(args: string[]): Promise<void> {
     const rel = file.target ?? file.path
     const abs = resolve(targetDir, rel)
     if (existsSync(abs) && !force) {
-      p.log.warn(
-        `${rel} already exists. Use --force to overwrite, or move it aside.`,
-      )
-      process.exit(1)
+      const message = `${rel} already exists. Use --force to overwrite, or move it aside.`
+      p.log.warn(message)
+      exitWithError(message)
     }
     mkdirSync(dirname(abs), { recursive: true })
     writeFileSync(abs, file.content, "utf-8")
@@ -92,15 +92,16 @@ export async function add(args: string[]): Promise<void> {
     p.log.success(`Wrote ${path}`)
   }
 
+  let packageManager: string | null = null
   if (!skipDeps && data.dependencies.length > 0) {
-    const pm = detectPackageManager(targetDir)
-    p.log.info(`Installing npm deps with ${pm}…`)
+    packageManager = detectPackageManager(targetDir)
+    p.log.info(`Installing npm deps with ${packageManager}…`)
     const cmd =
-      pm === "pnpm"
+      packageManager === "pnpm"
         ? ["pnpm", "add", ...data.dependencies]
-        : pm === "yarn"
+        : packageManager === "yarn"
           ? ["yarn", "add", ...data.dependencies]
-          : pm === "bun"
+          : packageManager === "bun"
             ? ["bun", "add", ...data.dependencies]
             : ["npm", "install", ...data.dependencies]
     const r = spawnSync(cmd[0]!, cmd.slice(1), {
@@ -108,11 +109,10 @@ export async function add(args: string[]): Promise<void> {
       stdio: "inherit",
     })
     if (r.status !== 0) {
-      p.log.warn(
-        `${pm} exited ${r.status}. Component files were written; install deps manually:`,
-      )
+      const message = `${packageManager} exited ${r.status}. Component files were written; install deps manually:`
+      p.log.warn(message)
       p.log.info(`  ${cmd.join(" ")}`)
-      process.exit(1)
+      exitWithError(message)
     }
   }
 
@@ -120,6 +120,17 @@ export async function add(args: string[]): Promise<void> {
     p.log.info(`Preview: ${data.preview.bundle_html_url}`)
   }
   p.outro(`✅ Added ${data.install_ref}`)
+
+  return {
+    author: data.author,
+    component_slug: data.slug,
+    dependencies_count: data.dependencies.length,
+    files_count: data.files.length,
+    force,
+    install_ref: data.install_ref,
+    package_manager: packageManager,
+    skip_deps: skipDeps,
+  }
 }
 
 async function fetchInstallData(

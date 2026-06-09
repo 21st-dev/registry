@@ -1,5 +1,7 @@
 import * as p from "@clack/prompts"
+import type { CliAnalyticsMetadata } from "./analytics.js"
 import { getApiBaseUrl } from "./config.js"
+import { exitWithError } from "./exit.js"
 import { getFlagValue, hasFlag, requireApiKey } from "./utils.js"
 
 interface SearchResult {
@@ -26,13 +28,13 @@ interface SearchResponse {
 
 const API_BASE = getApiBaseUrl().replace(/\/$/, "")
 
-export async function search(args: string[]): Promise<void> {
+export async function search(args: string[]): Promise<CliAnalyticsMetadata | void> {
   const positional = args.find((a) => !a.startsWith("--"))
   if (!positional) {
-    console.error(
-      `Usage: npx @21st-dev/registry search "<query>" [--scope team|mine|public] [--limit N] [--json]`,
-    )
-    process.exit(1)
+    const message =
+      `Usage: npx @21st-dev/registry search "<query>" [--scope team|mine|public] [--limit N] [--json]`
+    console.error(message)
+    exitWithError(message)
   }
 
   const apiKey = requireApiKey()
@@ -60,20 +62,27 @@ export async function search(args: string[]): Promise<void> {
     } catch {
       /* */
     }
-    console.error(`search failed (${res.status}): ${msg || res.statusText}`)
-    process.exit(1)
+    const message = `search failed (${res.status}): ${msg || res.statusText}`
+    console.error(message)
+    exitWithError(message)
   }
 
   const data = (await res.json()) as SearchResponse
+  const metadata = {
+    limit: Number(limit),
+    query_length: positional.length,
+    result_count: data.results.length,
+    scope,
+  }
 
   if (wantJson) {
     console.log(JSON.stringify(data, null, 2))
-    return
+    return metadata
   }
 
   if (data.results.length === 0) {
     p.log.info(`No components matching "${data.query}" in ${data.scope} scope.`)
-    return
+    return metadata
   }
 
   console.log("")
@@ -91,4 +100,5 @@ export async function search(args: string[]): Promise<void> {
   }
 
   console.log(`Install:  npx @21st-dev/registry add <ref>`)
+  return metadata
 }

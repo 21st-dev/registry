@@ -1,5 +1,7 @@
 import * as p from "@clack/prompts"
+import type { CliAnalyticsMetadata } from "./analytics.js"
 import { getApiBaseUrl } from "./config.js"
+import { exitWithError } from "./exit.js"
 import { hasFlag, requireApiKey } from "./utils.js"
 
 interface InviteLinkResponse {
@@ -17,7 +19,9 @@ interface InviteLinkResponse {
 const API_BASE = getApiBaseUrl().replace(/\/$/, "")
 
 /** `21st-registry invite` — print a copy-pasteable invite link. */
-export async function inviteLink(args: string[]): Promise<void> {
+export async function inviteLink(
+  args: string[],
+): Promise<CliAnalyticsMetadata | void> {
   const apiKey = requireApiKey()
   const refresh = hasFlag(args, "--refresh") || hasFlag(args, "--regenerate")
   const wantJson = hasFlag(args, "--json")
@@ -37,21 +41,22 @@ export async function inviteLink(args: string[]): Promise<void> {
     } catch {
       /* keep raw */
     }
-    console.error(`invite-link failed (${res.status}): ${msg || res.statusText}`)
-    process.exit(1)
+    const message = `invite-link failed (${res.status}): ${msg || res.statusText}`
+    console.error(message)
+    exitWithError(message)
   }
 
   const data = (await res.json()) as InviteLinkResponse
 
   if (wantJson) {
     console.log(JSON.stringify(data, null, 2))
-    return
+    return { json: wantJson, quiet, refresh }
   }
 
   if (quiet) {
     // Just the URL — handy for `pbcopy`, Slack bots, etc.
     console.log(data.invite_url)
-    return
+    return { json: wantJson, quiet, refresh }
   }
 
   p.intro("@21st-dev/registry invite")
@@ -79,4 +84,5 @@ export async function inviteLink(args: string[]): Promise<void> {
   )
   console.log("   npx @21st-dev/registry invite --quiet | pbcopy")
   p.outro("Done")
+  return { json: wantJson, quiet, refresh }
 }

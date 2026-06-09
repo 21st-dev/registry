@@ -10,6 +10,7 @@ import {
   resolve,
 } from "node:path"
 import { tmpdir } from "node:os"
+import type { CliAnalyticsMetadata } from "./analytics.js"
 import { publishToApi } from "./api.js"
 import {
   buildConfigFromFlags,
@@ -18,6 +19,7 @@ import {
   type LoadedConfig,
   type Visibility,
 } from "./config-loader.js"
+import { exitWithError } from "./exit.js"
 import {
   getFlagValue,
   getRepeatedFlagValues,
@@ -26,7 +28,7 @@ import {
   slugify,
 } from "./utils.js"
 
-export async function publish(args: string[]): Promise<void> {
+export async function publish(args: string[]): Promise<CliAnalyticsMetadata | void> {
   const apiKey = requireApiKey()
   const loaded = resolveConfig(args)
 
@@ -55,10 +57,22 @@ export async function publish(args: string[]): Promise<void> {
     p.log.info(`Install in another project:`)
     p.log.info(`  npx @21st-dev/registry add ${result.installRef}`)
     p.outro("Done")
+    return {
+      component_id: result.componentId,
+      demos_count: loaded.resolvedDemos.length,
+      has_preview: loaded.resolvedDemos.some((demo) => !!demo.resolvedPreview),
+      has_registry_dependencies:
+        (loaded.config.registry_dependencies ?? []).length > 0,
+      is_new: result.isNew,
+      registry: loaded.config.registry,
+      runtime: loaded.config.runtime,
+      visibility: result.visibility,
+    }
   } catch (e) {
     s.stop("Publish failed")
-    p.log.error(e instanceof Error ? e.message : String(e))
-    process.exit(1)
+    const message = e instanceof Error ? e.message : String(e)
+    p.log.error(message)
+    exitWithError(message)
   }
 }
 

@@ -1,5 +1,7 @@
 import * as p from "@clack/prompts"
+import type { CliAnalyticsMetadata } from "./analytics.js"
 import { getApiBaseUrl, getApiKey, saveApiKey } from "./config.js"
+import { exitWithError } from "./exit.js"
 
 const API_BASE = getApiBaseUrl().replace(/\/$/, "")
 const API_KEY_URL = "https://21st.dev/team/api-keys"
@@ -16,7 +18,9 @@ function isInteractive(): boolean {
   return Boolean(process.stdin.isTTY && process.stdout.isTTY)
 }
 
-export async function login(opts?: { apiKey?: string }) {
+export async function login(
+  opts?: { apiKey?: string },
+): Promise<CliAnalyticsMetadata | void> {
   const key = opts?.apiKey
 
   if (key) {
@@ -27,23 +31,21 @@ export async function login(opts?: { apiKey?: string }) {
         `Authenticated as ${user.displayName || user.email} (team: ${team.name})`,
       )
       console.log("Key saved to ~/.an/credentials")
+      return { mode: "flag" }
     } catch {
-      console.error(
-        `Error: Invalid API key. Get a new one at ${API_KEY_URL}`,
-      )
-      process.exit(1)
+      const message = `Error: Invalid API key. Get a new one at ${API_KEY_URL}`
+      console.error(message)
+      exitWithError(message)
     }
     return
   }
 
   if (!isInteractive()) {
-    console.error(
-      "Error: No API key provided. Use --api-key KEY or set API_KEY_21ST.",
-    )
-    console.error(
-      `Get your API key at ${API_KEY_URL}`,
-    )
-    process.exit(1)
+    const message =
+      "Error: No API key provided. Use --api-key KEY or set API_KEY_21ST."
+    console.error(message)
+    console.error(`Get your API key at ${API_KEY_URL}`)
+    exitWithError(message)
   }
 
   p.intro("@21st-dev/registry login")
@@ -72,11 +74,11 @@ export async function login(opts?: { apiKey?: string }) {
     )
     p.log.info("Key saved to ~/.an/credentials")
     p.outro("Done")
+    return { mode: "interactive" }
   } catch {
     s.stop("Invalid API key")
-    p.log.error(
-      `Invalid API key. Get a new one at ${API_KEY_URL}`,
-    )
-    process.exit(1)
+    const message = `Invalid API key. Get a new one at ${API_KEY_URL}`
+    p.log.error(message)
+    exitWithError(message)
   }
 }

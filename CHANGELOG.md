@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.9 — 2026-06-11
+
+- New `team` command group: `list`, `info`, `create`, `edit`, `invite <email>` — view, create, and edit your teams and invite members without leaving the terminal.
+- New `registry` command group: `list`, `info`, `create`, `edit` — manage team registries, addressed by slug within a team.
+- `--team <slug>` flag on team/registry subcommands to target any of your teams (default: the team your API key belongs to); `--json` on all subcommands for machine-readable output.
+- Team JSON output is limited to a safe field whitelist (no integration payloads).
+- List outputs (`team list`, `team info` members, `registry list`) render as aligned text tables.
+- Requires 21st.dev backend with tRPC API-key support (deployed 2026-06-11); on older backends the new commands return "Not authenticated".
+
 ## 0.0.6 — 2026-06-04
 
 - Add `--runtime expo` publishing support for Expo / React Native components.

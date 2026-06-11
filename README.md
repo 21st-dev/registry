@@ -168,10 +168,36 @@ You can also pass `API_KEY_21ST=...` in the environment.
 | `add @user/slug` | Install from a team registry |
 | `search "<query>"` | Semantic search across your team's library |
 | `invite` | Print a shareable invite link for your team |
+| `team <subcommand>` | View, create, and edit your teams |
+| `registry <subcommand>` | View, create, and edit team registries |
 | `install-skill` | Install the AI-agent skill (Claude + Cursor) |
 | `print-skill` | Print the bundled SKILL.md to stdout |
 
 Run any command with `--help` for full flag list.
+
+## Teams & registries
+
+Manage teams and registries without leaving the terminal. All subcommands
+accept `--json` for machine-readable output. Teams are addressed by slug via
+`--team <slug>` (or a positional `[team]` argument where shown); without it,
+commands target the team your API key belongs to.
+
+```bash
+# Teams
+npx @21st-dev/registry team list                            # your teams (slug, role, default)
+npx @21st-dev/registry team info acme                       # details, members, pending invites
+npx @21st-dev/registry team create "Acme" --description "Design systems"
+npx @21st-dev/registry team edit acme --name "Acme Inc"     # owner only
+npx @21st-dev/registry team invite dev@acme.com --team acme # email invite
+
+# Registries (slug-addressed within a team)
+npx @21st-dev/registry registry list --team acme
+npx @21st-dev/registry registry info ui-kit --team acme
+npx @21st-dev/registry registry create "UI Kit" --team acme # slug auto-derived: ui-kit
+npx @21st-dev/registry registry edit ui-kit --description "Buttons, inputs, cards"
+```
+
+Deletion is intentionally not supported from the CLI — use the web Studio.
 
 ## License
 

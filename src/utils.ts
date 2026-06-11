@@ -47,6 +47,34 @@ export function slugify(name: string): string {
     .slice(0, 100)
 }
 
+export function isInteractive(): boolean {
+  return Boolean(process.stdin.isTTY && process.stdout.isTTY)
+}
+
+/** Print the error (runTrackedCommand swallows CliExitError messages) and exit. */
+export function printAndExit(message: string, exitCode = 1): never {
+  p.log.error(message)
+  exitWithError(message, exitCode)
+}
+
+/** Render rows as an aligned text table (2-space gutter, dash underline under the header). */
+export function formatTable(rows: string[][], header: string[]): string[] {
+  const all = [header, ...rows]
+  const widths: number[] = []
+  for (const row of all) {
+    row.forEach((cell, i) => {
+      widths[i] = Math.max(widths[i] ?? 0, cell.length)
+    })
+  }
+  const fmt = (row: string[]) =>
+    ("  " + row.map((cell, i) => cell.padEnd(widths[i] ?? 0)).join("  ")).trimEnd()
+  return [
+    fmt(header),
+    "  " + widths.map((w) => "-".repeat(w)).join("  "),
+    ...rows.map(fmt),
+  ]
+}
+
 export function requireApiKey(): string {
   const apiKey = getApiKey()
   if (!apiKey) {

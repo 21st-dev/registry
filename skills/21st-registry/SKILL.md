@@ -139,6 +139,38 @@ npx @21st-dev/registry search "button" --scope team
 
 ---
 
+## Managing teams & registries
+
+View, create, and edit teams and registries from the CLI (no deletion — that
+stays in the web Studio). Every subcommand accepts `--json`; prefer it when
+you need to parse the output. Teams are addressed by slug with `--team <slug>`
+(default: the team the API key belongs to).
+
+```bash
+# Inspect before acting
+npx @21st-dev/registry team list --json            # all teams: slug, role, default
+npx @21st-dev/registry team info [team]            # members + pending invites
+npx @21st-dev/registry registry list --team <slug> --json
+
+# Create
+npx @21st-dev/registry team create "<name>" [--description TEXT]
+npx @21st-dev/registry registry create "<name>" [--slug SLUG] [--description TEXT] [--team SLUG]
+# registry slug is auto-derived from the name if --slug is omitted
+
+# Edit
+npx @21st-dev/registry team edit [team] --name TEXT --description TEXT   # owner only
+npx @21st-dev/registry registry edit <slug> --name TEXT --description TEXT
+
+# Invite a collaborator by email
+npx @21st-dev/registry team invite <email> [--team SLUG]
+```
+
+Typical flow before publishing a new component group: `registry list --json`
+to see what exists → `registry create "Marketing blocks"` if needed →
+`publish --to marketing-blocks`.
+
+---
+
 ## Hard rules for agents
 
 - ❌ **Never** use `--public` without an explicit "publish publicly" from the user.

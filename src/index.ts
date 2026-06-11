@@ -5,7 +5,20 @@ import { installSkill, printSkill } from "./install-skill.js"
 import { login } from "./login.js"
 import { publish } from "./publish.js"
 import { search } from "./search.js"
-import { inviteLink } from "./team.js"
+import {
+  inviteLink,
+  teamCreate,
+  teamEdit,
+  teamInfo,
+  teamInvite,
+  teamList,
+} from "./team.js"
+import {
+  registryCreate,
+  registryEdit,
+  registryInfo,
+  registryList,
+} from "./registry-mgmt.js"
 import { runTrackedCommand } from "./tracking.js"
 import { getFlagValue } from "./utils.js"
 
@@ -27,6 +40,8 @@ function showHelp(): void {
   console.log("  add @user/slug                     Install a component from your team library")
   console.log("  search \"<query>\"                   Search your team library")
   console.log("  invite                             Print a shareable invite link for your team")
+  console.log("  team <list|info|create|edit|invite>  Manage your teams")
+  console.log("  registry <list|info|create|edit>   Manage team registries")
   console.log("  install-skill                      Install the AI-agent skill (Claude Code + Cursor)")
   console.log("  print-skill                        Print the bundled SKILL.md to stdout")
   console.log("\nQuick examples:")
@@ -94,6 +109,61 @@ if (command === "login") {
     console.log("  --json       Machine-readable output")
   } else {
     await runTrackedCommand("invite", () => inviteLink(args), trackingOptions)
+  }
+} else if (command === "team") {
+  const sub = args[0]
+  const subArgs = args.slice(1)
+  if (hasFlag("--help") || hasFlag("-h") || !sub) {
+    console.log("Usage: npx @21st-dev/registry team <subcommand>")
+    console.log("")
+    console.log("Subcommands:")
+    console.log("  list                               Your teams (slug, role, default)")
+    console.log("  info [team]                        Team details, members, pending invites")
+    console.log("  create [name] [--description TEXT] Create a team (you become owner)")
+    console.log("  edit [team] [--name] [--description]  Edit team (owner only)")
+    console.log("  invite <email> [--team TEAM]       Send an email invite")
+    console.log("")
+    console.log("TEAM is the team slug. Default: the team your API key belongs to.")
+    console.log("All subcommands accept --json for machine-readable output.")
+  } else if (sub === "list") {
+    await runTrackedCommand("team-list", () => teamList(subArgs), trackingOptions)
+  } else if (sub === "info") {
+    await runTrackedCommand("team-info", () => teamInfo(subArgs), trackingOptions)
+  } else if (sub === "create") {
+    await runTrackedCommand("team-create", () => teamCreate(subArgs), trackingOptions)
+  } else if (sub === "edit") {
+    await runTrackedCommand("team-edit", () => teamEdit(subArgs), trackingOptions)
+  } else if (sub === "invite") {
+    await runTrackedCommand("team-invite", () => teamInvite(subArgs), trackingOptions)
+  } else {
+    console.log(`Unknown team subcommand: ${sub}. Try: list, info, create, edit, invite`)
+    process.exit(1)
+  }
+} else if (command === "registry") {
+  const sub = args[0]
+  const subArgs = args.slice(1)
+  if (hasFlag("--help") || hasFlag("-h") || !sub) {
+    console.log("Usage: npx @21st-dev/registry registry <subcommand>")
+    console.log("")
+    console.log("Subcommands:")
+    console.log("  list [--team TEAM]                 Registries in a team")
+    console.log("  info <slug> [--team TEAM]          Registry details")
+    console.log("  create [name] [--slug] [--description] [--team]  Create a registry")
+    console.log("  edit <slug> [--name] [--description] [--team]    Edit a registry")
+    console.log("")
+    console.log("Registries are addressed by slug within a team (default: your API key's team).")
+    console.log("All subcommands accept --json for machine-readable output.")
+  } else if (sub === "list") {
+    await runTrackedCommand("registry-list", () => registryList(subArgs), trackingOptions)
+  } else if (sub === "info") {
+    await runTrackedCommand("registry-info", () => registryInfo(subArgs), trackingOptions)
+  } else if (sub === "create") {
+    await runTrackedCommand("registry-create", () => registryCreate(subArgs), trackingOptions)
+  } else if (sub === "edit") {
+    await runTrackedCommand("registry-edit", () => registryEdit(subArgs), trackingOptions)
+  } else {
+    console.log(`Unknown registry subcommand: ${sub}. Try: list, info, create, edit`)
+    process.exit(1)
   }
 } else if (command === "install-skill") {
   if (hasFlag("--help") || hasFlag("-h")) {

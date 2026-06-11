@@ -17,6 +17,15 @@ export type CliCommand =
   | "search"
   | "invite"
   | "install-skill"
+  | "team-list"
+  | "team-info"
+  | "team-create"
+  | "team-edit"
+  | "team-invite"
+  | "registry-list"
+  | "registry-info"
+  | "registry-create"
+  | "registry-edit"
 
 export type CliCommandStatus = "success" | "error"
 export type CliAnalyticsMetadata = Record<
